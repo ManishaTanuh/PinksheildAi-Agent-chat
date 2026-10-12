@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#14868C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="apple-touch-icon" href="/static/tanuh-icon-192.png">
+<title>PinkShieldAI - Assessment</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0fafa;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #DAF3F4;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .header-logos { display: flex; align-items: center; gap: 16px; }
+  .header-logos img { height: 36px; width: auto; object-fit: contain; }
+  .header-logos img.logo-iisc { mix-blend-mode: multiply; height: 40px; }
+  .header-title { text-align: right; }
+  .header-title h1 { font-size: 16px; font-weight: 700; color: #14868C; }
+  .header-title p { font-size: 11px; color: #5f7a7c; }
+
+  /* Progress bar */
+  .progress-wrap {
+    padding: 12px 20px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+  }
+  .progress-text {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-bar {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #14868C, #0f9da4);
+    border-radius: 3px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Main content */
+  .main-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+
+  /* Question card */
+  .question-card {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    max-width: 520px;
+    width: 100%;
+    animation: cardIn 0.35s ease;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .question-label {
+    font-size: 13px;
+    color: #14868C;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .question-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    line-height: 1.4;
+    margin-bottom: 24px;
+  }
+  .clarification {
+    font-size: 13px;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-top: 16px;
+    line-height: 1.5;
+    border-left: 3px solid #14868C;
+  }
+
+  /* Radio options */
+  .radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .radio-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 15px;
+    color: #374151;
+  }
+  .radio-option:hover { border-color: #14868C; background: #f0fafa; }
+  .radio-option.selected { border-color: #14868C; background: #e8f7f8; }
+  .radio-dot {
+    width: 20px; height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .radio-option.selected .radio-dot {
+    border-color: #14868C;
+  }
+  .radio-dot::after {
+    content: '';
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #14868C;
+    transform: scale(0);
+    transition: transform 0.2s;
+  }
+  .radio-option.selected .radio-dot::after { transform: scale(1); }
+
+  /* Slider */
+  .slider-wrap { padding: 8px 0; }
+  .slider-value {
+    text-align: center;
+    font-size: 40px;
+    font-weight: 700;
+    color: #14868C;
+    margin-bottom: 12px;
+  }
+  .slider-input {
+    width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    outline: none;
+  }
+  .slider-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 28px; height: 28px;
+    background: #14868C;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .slider-input::-moz-range-thumb {
+    width: 28px; height: 28px;
+    background: #14868C;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+  .slider-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  /* Multi-select checkboxes */
+  .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+  .checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 15px;
+    color: #374151;
+  }
+  .checkbox-option:hover { border-color: #14868C; background: #f0fafa; }
+  .checkbox-option.selected { border-color: #14868C; background: #e8f7f8; }
+  .checkbox-box {
+    width: 20px; height: 20px;
+    border: 2px solid #d1d5db;
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .checkbox-option.selected .checkbox-box {
+    background: #14868C;
+    border-color: #14868C;
+  }
+  .checkbox-box::after {
+    content: '';
+    width: 6px; height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    transition: transform 0.2s;
+  }
+  .checkbox-option.selected .checkbox-box::after { transform: rotate(45deg) scale(1); }
+
+  /* Text input */
+  .text-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+    min-height: 60px;
+  }
+  .text-input:focus { border-color: #14868C; }
+
+  /* Next button */
+  .btn-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+  .next-btn {
+    padding: 14px 36px;
+    background: linear-gradient(135deg, #14868C, #0f6b70);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  .next-btn:hover { transform: scale(1.03); }
+  .next-btn:active { transform: scale(0.97); }
+  .next-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* Loading state */
+  .loading-card {
+    text-align: center;
+    padding: 48px 28px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #14868C;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 14px; color: #6b7280; }
+
+  /* Error */
+  .error-msg {
+    background: #fef2f2;
+    color: #991b1b;
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    border: 1px solid #fecaca;
+    text-align: center;
+  }
+
+  /* Urgent referral banner */
+  .referral-banner {
+    background: #fef2f2;
+    border: 2px solid #dc2626;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    animation: cardIn 0.35s ease;
+  }
+  .referral-banner h3 {
+    color: #dc2626;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .referral-banner p {
+    color: #7f1d1d;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Riskometer (kept from original) */
+  .riskometer {
+    max-width: 520px;
+    width: 100%;
+    background: white;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    animation: cardIn 0.4s ease;
+  }
+  .riskometer-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+  .riskometer-bar-wrap { position: relative; margin-bottom: 32px; }
+  .riskometer-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .riskometer-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.3px;
+  }
+  .riskometer-seg-baseline { background: #059669; flex-grow: 40; }
+  .riskometer-seg-evident { background: #0891b2; flex-grow: 17; }
+  .riskometer-seg-significant { background: #d97706; flex-grow: 22; }
+  .riskometer-seg-high { background: #dc2626; flex-grow: 21; }
+  .riskometer-marker {
+    position: absolute;
+    top: 100%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .riskometer-marker::before {
+    content: '';
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 10px solid #1f2937;
+  }
+  .riskometer-marker-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .riskometer-details { margin-top: 8px; }
+  .riskometer-details h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    margin: 14px 0 6px;
+  }
+  .riskometer-details h3:first-child { margin-top: 0; }
+  .riskometer-details ul { list-style: none; padding: 0; }
+  .riskometer-details li { padding: 4px 0; font-size: 13px; color: #374151; line-height: 1.4; }
+  .riskometer-details li::before { margin-right: 6px; }
+  .risk-factor::before { content: "\26A0\FE0F"; }
+  .protective-factor::before { content: "\2705"; }
+  .recommendation::before { content: "\1F4CB"; }
+  .new-session-btn {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #14868C, #0f6b70);
+    color: white;
+    border: none;
+    border-radius: 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .new-session-btn:hover { transform: scale(1.03); }
+
+  /* Footer */
+  .site-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 24px 20px 12px;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    width: 100%;
+  }
+  .footer-address { text-align: left; }
+  .footer-contact { text-align: right; }
+  .footer-address strong, .footer-contact strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #14868C;
+  }
+  .footer-contact a { color: #14868C; text-decoration: none; }
+  .footer-contact a:hover { text-decoration: underline; }
+  .footer-contact-lines { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .footer-tel { margin-top: 3px; }
+  .footer-social {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    padding: 4px 0;
+  }
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #e8f7f8;
+    color: #14868C;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .footer-social a:hover { background: #d0eff0; }
+  .footer-social svg { width: 16px; height: 16px; }
+  .footer-bottom {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+  }
+  .footer-disclaimer { margin-top: 4px; font-size: 10px; color: #b0b0b0; }
+  @media (max-width: 480px) {
+    .question-card { padding: 24px 20px; border-radius: 16px; }
+    .question-text { font-size: 16px; }
+    .slider-value { font-size: 32px; }
+    .header-logos img { height: 26px; }
+    .header-logos img.logo-iisc { height: 30px; }
+    .header-logos { gap: 10px; }
+    .header-title h1 { font-size: 14px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 14px; }
+    .footer-address, .footer-contact { text-align: center; }
+    .footer-contact-lines { align-items: center; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-logos">
+    <img src="/static/tanuh.png" alt="Tanuh">
+    <img src="/static/MoE_Logo.svg" alt="Ministry of Education">
+    <img src="/static/IISc_logo.png" alt="IISc" class="logo-iisc">
+  </div>
+  <div class="header-title">
+    <h1>PinkShieldAI</h1>
+    <p>Risk Assessment</p>
+  </div>
+</header>
+
+<div class="progress-wrap" id="progress-wrap" style="display:none">
+  <div class="progress-text">
+    <span id="progress-label">Question 1</span>
+    <span id="progress-pct">0%</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+</div>
+
+<div class="main-content" id="main-content">
+  <div class="question-card loading-card">
+    <div class="spinner"></div>
+    <div class="loading-text">Starting your assessment...</div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-address">
+        <strong>Address</strong>
+        AI Centre of Excellence in Healthcare<br>
+        Indian Institute of Science<br>
+        Seventh Floor, TCS Smart-X Hub<br>
+        Bengaluru, India - 560 012
+      </div>
+      <div class="footer-contact">
+        <strong>Contact Information</strong>
+        <div class="footer-contact-lines">
+          <div>Study: <a href="mailto:breastcancerdetection@tanuh.ai">breastcancerdetection@tanuh.ai</a></div>
+          <div>General: <a href="mailto:info@tanuh.ai">info@tanuh.ai</a></div>
+          <div class="footer-tel">Tel: (080) 2293 4106 &nbsp;|&nbsp; (080) 2293 4107</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-social">
+      <a href="https://www.tanuh.ai" target="_blank" rel="noopener noreferrer" title="Website">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/tanuh-aicoe/" target="_blank" rel="noopener noreferrer" title="LinkedIn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>
+      </a>
+      <a href="https://x.com/TANUH_AI" target="_blank" rel="noopener noreferrer" title="X (Twitter)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@TANUH-AI" target="_blank" rel="noopener noreferrer" title="YouTube">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12z"/></svg>
+      </a>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2025 by TANUH Foundation
+      <div class="footer-disclaimer">Research prototype for demonstration only. Not a medical device. Please consult a healthcare professional for clinical advice.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const API = window.location.origin;
+let sessionId = null;
+let currentQuestion = null;
+let selectedValue = null;
+let questionNumber = 0;
+
+const mainContent = document.getElementById('main-content');
+const progressWrap = document.getElementById('progress-wrap');
+const progressLabel = document.getElementById('progress-label');
+const progressPct = document.getElementById('progress-pct');
+const progressFill = document.getElementById('progress-fill');
+
+function updateProgress(progress) {
+  if (!progress) return;
+  progressWrap.style.display = 'block';
+  const pct = progress.progress_pct;
+  progressLabel.textContent = `Question ${progress.answered + 1} of ${progress.total}`;
+  progressPct.textContent = `${pct}%`;
+  progressFill.style.width = `${pct}%`;
+  questionNumber = progress.answered + 1;
+}
+
+function renderQuestion(q) {
+  currentQuestion = q;
+  selectedValue = null;
+
+  if (q.status === 'assessment_complete') {
+    fetchResult();
+    return;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'question-card';
+
+  card.innerHTML = `<div class="question-label">Question ${questionNumber}</div>
+    <div class="question-text">${escHtml(q.question)}</div>`;
+
+  const controlWrap = document.createElement('div');
+
+  if (q.ui_type === 'slider') {
+    renderSlider(controlWrap, q);
+  } else if (q.ui_type === 'radio') {
+    renderRadio(controlWrap, q);
+  } else if (q.ui_type === 'multi_select') {
+    renderMultiSelect(controlWrap, q);
+  } else if (q.ui_type === 'text') {
+    renderTextInput(controlWrap, q);
+  } else {
+    renderRadio(controlWrap, q);
+  }
+
+  card.appendChild(controlWrap);
+
+  if (q.clarification) {
+    const clar = document.createElement('div');
+    clar.className = 'clarification';
+    clar.textContent = q.clarification;
+    card.appendChild(clar);
+  }
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'btn-row';
+  const btn = document.createElement('button');
+  btn.className = 'next-btn';
+  btn.id = 'next-btn';
+  btn.textContent = 'Next';
+  btn.disabled = true;
+  btn.addEventListener('click', submitAnswer);
+  btnRow.appendChild(btn);
+  card.appendChild(btnRow);
+
+  mainContent.innerHTML = '';
+  mainContent.appendChild(card);
+}
+
+function renderSlider(wrap, q) {
+  wrap.className = 'slider-wrap';
+  const mid = Math.round((q.min_val + q.max_val) / 2);
+  selectedValue = String(mid);
+  wrap.innerHTML = `
+    <div class="slider-value" id="slider-val">${mid}</div>
+    <input type="range" class="slider-input" id="slider" min="${q.min_val}" max="${q.max_val}" value="${mid}">
+    <div class="slider-labels"><span>${q.min_val}</span><span>${q.max_val}</span></div>`;
+  setTimeout(() => {
+    const slider = document.getElementById('slider');
+    const valDisplay = document.getElementById('slider-val');
+    slider.addEventListener('input', () => {
+      selectedValue = slider.value;
+      valDisplay.textContent = slider.value;
+    });
+    enableNext();
+  }, 0);
+}
+
+function renderRadio(wrap, q) {
+  wrap.className = 'radio-group';
+  (q.options || []).forEach(opt => {
+    const label = (q.display_labels && q.display_labels[opt]) || opt;
+    const div = document.createElement('div');
+    div.className = 'radio-option';
+    div.dataset.value = opt;
+    div.innerHTML = `<div class="radio-dot"></div><span>${escHtml(label)}</span>`;
+    div.addEventListener('click', () => {
+      wrap.querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+      div.classList.add('selected');
+      selectedValue = opt;
+      enableNext();
+    });
+    wrap.appendChild(div);
+  });
+}
+
+function renderMultiSelect(wrap, q) {
+  wrap.className = 'checkbox-group';
+  const selected = new Set();
+  (q.options || []).forEach(opt => {
+    const label = (q.display_labels && q.display_labels[opt]) || opt;
+    const div = document.createElement('div');
+    div.className = 'checkbox-option';
+    div.dataset.value = opt;
+    div.innerHTML = `<div class="checkbox-box"></div><span>${escHtml(label)}</span>`;
+    div.addEventListener('click', () => {
+      if (selected.has(opt)) {
+        selected.delete(opt);
+        div.classList.remove('selected');
+      } else {
+        selected.add(opt);
+        div.classList.add('selected');
+      }
+      selectedValue = selected.size > 0 ? Array.from(selected).join(',') : null;
+      const btn = document.getElementById('next-btn');
+      if (btn) btn.disabled = !selectedValue;
+    });
+    wrap.appendChild(div);
+  });
+}
+
+function renderTextInput(wrap, q) {
+  const ta = document.createElement('textarea');
+  ta.className = 'text-input';
+  ta.placeholder = 'Type your answer here...';
+  ta.addEventListener('input', () => {
+    selectedValue = ta.value.trim() || null;
+    const btn = document.getElementById('next-btn');
+    if (btn) btn.disabled = !selectedValue;
+  });
+  wrap.appendChild(ta);
+}
+
+function enableNext() {
+  const btn = document.getElementById('next-btn');
+  if (btn) btn.disabled = false;
+}
+
+async function submitAnswer() {
+  if (!selectedValue || !currentQuestion) return;
+  const btn = document.getElementById('next-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+
+  try {
+    const res = await fetch(`${API}/api/v1/sessions/${sessionId}/answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ factor_id: currentQuestion.factor_id, value: selectedValue }),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+
+    if (data.status === 'rejected') {
+      btn.textContent = 'Next';
+      btn.disabled = false;
+      showError(data.error || 'Invalid answer. Please try again.');
+      return;
+    }
+
+    if (data.urgent_referral) {
+      showReferralBanner(data.urgent_referral);
+    }
+
+    if (data.progress) updateProgress(data.progress);
+
+    if (data.status === 'assessment_complete') {
+      fetchResult();
+    } else if (data.next_question) {
+      renderQuestion(data.next_question);
+    }
+  } catch (err) {
+    btn.textContent = 'Next';
+    btn.disabled = false;
+    showError('Something went wrong. Please try again.');
+  }
+}
+
+function showError(msg) {
+  let existing = mainContent.querySelector('.error-msg');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.className = 'error-msg';
+  div.textContent = msg;
+  div.style.marginBottom = '12px';
+  const card = mainContent.querySelector('.question-card');
+  if (card) card.prepend(div);
+}
+
+function showReferralBanner(referral) {
+  const banner = document.createElement('div');
+  banner.className = 'referral-banner';
+  banner.innerHTML = `<h3>Important Notice</h3>
+    <p>Based on your response, we recommend consulting a healthcare professional at the earliest.
+    The assessment will continue, but please do follow up with your doctor.</p>`;
+  const card = mainContent.querySelector('.question-card');
+  if (card) card.prepend(banner);
+}
+
+async function fetchResult() {
+  mainContent.innerHTML = '<div class="question-card loading-card"><div class="spinner"></div><div class="loading-text">Calculating your results...</div></div>';
+  progressWrap.style.display = 'none';
+
+  try {
+    const res = await fetch(`${API}/api/v1/sessions/${sessionId}/result`);
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const result = await res.json();
+    renderRiskResult(result);
+  } catch (err) {
+    mainContent.innerHTML = '<div class="error-msg">Could not load results. Please refresh to try again.</div>';
+  }
+}
+
+function renderRiskResult(result) {
+  const pct = (result.risk_probability * 100).toFixed(1);
+  const levelLabel = result.risk_level.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const wrap = document.createElement('div');
+  wrap.className = 'riskometer';
+
+  let html = `<div class="riskometer-title">Your Risk Assessment</div>`;
+  html += `<div class="riskometer-bar-wrap"><div class="riskometer-bar">`;
+  html += `<div class="riskometer-seg riskometer-seg-baseline">Baseline</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-evident">Evident</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-significant">Significant</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-high">High</div>`;
+  html += `</div><div class="riskometer-marker" style="left:${pct}%">`;
+  html += `<span class="riskometer-marker-label">${pct}% — ${levelLabel}</span>`;
+  html += `</div></div>`;
+
+  html += `<div class="riskometer-details">`;
+  if (result.key_risk_factors && result.key_risk_factors.length) {
+    html += '<h3>Key Risk Factors</h3><ul>';
+    result.key_risk_factors.forEach(f => { html += `<li class="risk-factor">${escHtml(f.factor)}: ${escHtml(f.detail || '')}</li>`; });
+    html += '</ul>';
+  }
+  if (result.protective_factors && result.protective_factors.length) {
+    html += '<h3>Protective Factors</h3><ul>';
+    result.protective_factors.forEach(f => { html += `<li class="protective-factor">${escHtml(f.factor)}: ${escHtml(f.detail || '')}</li>`; });
+    html += '</ul>';
+  }
+  if (result.recommendations && result.recommendations.length) {
+    html += '<h3>Recommendations</h3><ul>';
+    result.recommendations.forEach(r => { html += `<li class="recommendation">${escHtml(r)}</li>`; });
+    html += '</ul>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  const btn = document.createElement('button');
+  btn.className = 'new-session-btn';
+  btn.textContent = 'Start New Assessment';
+  btn.onclick = () => { window.location.href = '/'; };
+  wrap.appendChild(btn);
+
+  mainContent.innerHTML = '';
+  mainContent.appendChild(wrap);
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+async function startSession() {
+  try {
+    const res = await fetch(`${API}/api/v1/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'web', mode: 'structured' }),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    sessionId = data.session_id;
+    if (data.progress) updateProgress(data.progress);
+    if (data.next_question) renderQuestion(data.next_question);
+  } catch (err) {
+    mainContent.innerHTML = '<div class="question-card"><div class="error-msg">Could not start session. Please refresh to try again.</div></div>';
+  }
+}
+
+startSession();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');
+</script>
+</body>
+</html>

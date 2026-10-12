@@ -1,0 +1,61 @@
+name: Deploy to GCE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - .github/workflows/deploy.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/135552380858/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: tanuh-bcd-portal@bcd-prototypes.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build and push image
+        run: |
+          IMAGE=gcr.io/bcd-prototypes/pinkshieldai-insurance
+          docker build -t $IMAGE:$GITHUB_SHA -t $IMAGE:latest backend/
+          docker push $IMAGE:$GITHUB_SHA
+          docker push $IMAGE:latest
+
+      - name: Deploy to VM
+        run: |
+          gcloud compute ssh pinkshieldai-vm \
+            --zone=asia-south1-c \
+            --project=bcd-prototypes \
+            --command='
+              IMAGE=gcr.io/bcd-prototypes/pinkshieldai-insurance:latest
+              docker pull $IMAGE
+              docker stop pinkshieldai 2>/dev/null || true
+              docker rm pinkshieldai 2>/dev/null || true
+              docker run -d --name pinkshieldai \
+                -p 8080:8080 \
+                -e CLOUD_SQL_CONNECTION_NAME=bcd-prototypes:asia-south1:tanuh-bcd-questionnaire-dev \
+                -e USE_CLOUD_SQL_CONNECTOR=true \
+                -e GCP_PROJECT=bcd-prototypes \
+                -e GCP_REGION=us-east5 \
+                -e CLAUDE_MODEL=claude-opus-4-6 \
+                -e USE_VERTEX_AI=true \
+                -e MYSQL_DB=pinkshieldAI_insurance \
+                -e "MYSQL_USER=tanuh-bcd-portal@bcd-prototypes.iam.gserviceaccount.com" \
+                $IMAGE
+              sleep 5
+              curl -sf http://localhost:8080/health
+            '

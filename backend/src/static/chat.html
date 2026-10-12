@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#14868C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+<link rel="apple-touch-icon" href="/static/tanuh-icon-192.png">
+<title>PinkShieldAI - Text Chat</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f0fafa;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #DAF3F4;
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  .header-logos {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header-logos img { height: 36px; width: auto; object-fit: contain; }
+  .header-logos img.logo-iisc { mix-blend-mode: multiply; height: 40px; }
+  .header-title { text-align: right; }
+  .header-title h1 { font-size: 16px; font-weight: 700; color: #14868C; }
+  .header-title p { font-size: 11px; color: #5f7a7c; }
+  #chat-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .message {
+    max-width: 80%;
+    padding: 12px 16px;
+    border-radius: 18px;
+    line-height: 1.5;
+    font-size: 15px;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .message.sakhi {
+    align-self: flex-start;
+    background: white;
+    color: #1f2937;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .message.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #14868C, #0f6b70);
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .typing-indicator {
+    align-self: flex-start;
+    background: white;
+    padding: 12px 20px;
+    border-radius: 18px;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    display: none;
+  }
+  .typing-indicator span {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #14868C;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: bounce 1.4s infinite ease-in-out;
+  }
+  .typing-indicator span:nth-child(2) { animation-delay: 0.16s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.32s; }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+  #input-area {
+    padding: 12px 16px;
+    background: white;
+    border-top: 1px solid #c8e8ea;
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  #input-area input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #c8e8ea;
+    border-radius: 24px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  #input-area input:focus { border-color: #14868C; }
+  #input-area input:disabled { background: #f9fafb; }
+  #input-area button {
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #14868C, #0f6b70);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  #input-area button:hover { transform: scale(1.03); }
+  #input-area button:active { transform: scale(0.97); }
+  #input-area button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .riskometer {
+    align-self: stretch;
+    max-width: 95%;
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    animation: fadeIn 0.4s ease;
+  }
+  .riskometer-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .riskometer-bar-wrap {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .riskometer-bar {
+    display: flex;
+    height: 28px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .riskometer-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.3px;
+  }
+  .riskometer-seg-baseline { background: #059669; flex-grow: 40; }
+  .riskometer-seg-evident { background: #0891b2; flex-grow: 17; }
+  .riskometer-seg-significant { background: #d97706; flex-grow: 22; }
+  .riskometer-seg-high { background: #dc2626; flex-grow: 21; }
+  .riskometer-marker {
+    position: absolute;
+    top: 100%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .riskometer-marker::before {
+    content: '';
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 10px solid #1f2937;
+  }
+  .riskometer-marker-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-top: 2px;
+    white-space: nowrap;
+  }
+  .riskometer-details { margin-top: 8px; }
+  .riskometer-details h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    margin: 12px 0 6px;
+  }
+  .riskometer-details h3:first-child { margin-top: 0; }
+  .riskometer-details ul { list-style: none; padding: 0; }
+  .riskometer-details li { padding: 3px 0; font-size: 13px; color: #374151; }
+  .riskometer-details li::before { margin-right: 6px; }
+  .risk-factor::before { content: "\26A0\FE0F"; }
+  .protective-factor::before { content: "\2705"; }
+  .recommendation::before { content: "\1F4CB"; }
+  .new-session-btn {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 24px;
+    background: linear-gradient(135deg, #14868C, #0f6b70);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .new-session-btn:hover { transform: scale(1.03); }
+  .error-msg {
+    align-self: center;
+    background: #fef2f2;
+    color: #991b1b;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    border: 1px solid #fecaca;
+  }
+  .site-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 24px 20px 12px;
+    color: #555;
+    font-size: 13px;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    width: 100%;
+  }
+  .footer-address { text-align: left; }
+  .footer-contact { text-align: right; }
+  .footer-address strong, .footer-contact strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #14868C;
+  }
+  .footer-contact a { color: #14868C; text-decoration: none; }
+  .footer-contact a:hover { text-decoration: underline; }
+  .footer-contact-lines { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
+  .footer-tel { margin-top: 3px; }
+  .footer-social {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    padding: 4px 0;
+  }
+  .footer-social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e8f7f8;
+    color: #14868C;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .footer-social a:hover { background: #d0eff0; }
+  .footer-social svg { width: 16px; height: 16px; }
+  .footer-bottom {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 10px;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+  }
+  .footer-disclaimer {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #b0b0b0;
+  }
+  @media (max-width: 768px) {
+    .footer-grid { gap: 20px; }
+    .site-footer { padding: 20px 14px 10px; font-size: 12px; }
+  }
+  @media (max-width: 480px) {
+    .message { max-width: 90%; font-size: 14px; }
+    .riskometer { padding: 14px; }
+    .riskometer-seg { font-size: 9px; }
+    .header-logos img { height: 26px; }
+    .header-logos img.logo-iisc { height: 30px; }
+    .header-logos { gap: 10px; }
+    .header-title h1 { font-size: 14px; }
+    .footer-grid { grid-template-columns: 1fr; gap: 14px; }
+    .footer-address, .footer-contact { text-align: center; }
+    .footer-contact-lines { align-items: center; }
+  }
+  #main-split { flex: 1; display: flex; min-height: 0; }
+  #robot-pane {
+    flex: 1 1 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, #DAF3F4 0%, #f0fafa 100%);
+    border-right: 1px solid #c8e8ea;
+    padding: 16px; min-width: 0;
+  }
+  #chat-pane { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #rive-avatar { display: none; width: 100%; height: 100%; max-width: 520px; max-height: 520px; }
+  #robot-fallback { width: 70%; max-width: 360px; animation: robot-float 3s ease-in-out infinite; }
+  @keyframes robot-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes robot-blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+  @keyframes robot-talk { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1.2); } }
+  @keyframes robot-ant { 0%,100% { fill: #f9a8d4; } 50% { fill: #ec4899; } }
+  #robot-fallback .eye { transform-box: fill-box; transform-origin: center; animation: robot-blink 4s infinite; }
+  #robot-fallback .mouth { transform-box: fill-box; transform-origin: center; transform: scaleY(0.3); }
+  #robot-fallback .ant { animation: robot-ant 2s infinite; }
+  #robot-pane[data-state="speaking"] .mouth { animation: robot-talk 0.35s infinite; }
+  #robot-pane[data-state="listening"] .ant { animation-duration: 0.5s; }
+  #robot-pane[data-state="processing"] #robot-fallback { animation-duration: 0.8s; }
+  @media (max-width: 760px) {
+    #main-split { flex-direction: column; }
+    #robot-pane { flex: 0 0 30%; border-right: none; border-bottom: 1px solid #c8e8ea; }
+    #robot-fallback { width: auto; height: 100%; }
+  }
+</style>
+<script src="https://unpkg.com/@rive-app/canvas@2"></script>
+<script>
+  // ?avatar=b shows version B; default is version A (Sakhi character).
+  document.write('<script src="/static/' + (new URLSearchParams(location.search).get('avatar') === 'b' ? 'sakhi-avatar-b.js' : 'sakhi-avatar.js') + '"><\/script>');
+</script>
+</head>
+<body>
+<header>
+  <div class="header-logos">
+    <img src="/static/tanuh.png" alt="Tanuh">
+    <img src="/static/MoE_Logo.svg" alt="Ministry of Education">
+    <img src="/static/IISc_logo.png" alt="IISc" class="logo-iisc">
+  </div>
+  <div class="header-title">
+    <h1>PinkShieldAI</h1>
+    <p>Text Chat</p>
+  </div>
+</header>
+
+<div id="main-split">
+<div id="robot-pane" data-state="disabled">
+  <canvas id="rive-avatar" width="520" height="520"></canvas>
+  <div id="robot-fallback"></div>
+</div>
+<div id="chat-pane">
+<div id="chat-container">
+  <div class="typing-indicator" id="typing">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<div id="input-area">
+  <input type="text" id="user-input" placeholder="Type your response..." disabled autocomplete="off">
+  <button id="send-btn" disabled>Send</button>
+</div>
+</div>
+</div>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div class="footer-address">
+        <strong>Address</strong>
+        AI Centre of Excellence in Healthcare<br>
+        Indian Institute of Science<br>
+        Seventh Floor, TCS Smart-X Hub<br>
+        Bengaluru, India - 560 012
+      </div>
+      <div class="footer-contact">
+        <strong>Contact Information</strong>
+        <div class="footer-contact-lines">
+          <div>Study: <a href="mailto:breastcancerdetection@tanuh.ai">breastcancerdetection@tanuh.ai</a></div>
+          <div>General: <a href="mailto:info@tanuh.ai">info@tanuh.ai</a></div>
+          <div class="footer-tel">Tel: (080) 2293 4106 &nbsp;|&nbsp; (080) 2293 4107</div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-social">
+      <a href="https://www.tanuh.ai" target="_blank" rel="noopener noreferrer" title="Website">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </a>
+      <a href="https://www.linkedin.com/company/tanuh-aicoe/" target="_blank" rel="noopener noreferrer" title="LinkedIn">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>
+      </a>
+      <a href="https://x.com/TANUH_AI" target="_blank" rel="noopener noreferrer" title="X (Twitter)">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+      <a href="https://www.youtube.com/@TANUH-AI" target="_blank" rel="noopener noreferrer" title="YouTube">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12z"/></svg>
+      </a>
+    </div>
+    <div class="footer-bottom">
+      &copy; 2025 by TANUH Foundation
+      <div class="footer-disclaimer">Research prototype for demonstration only. Not a medical device. Please consult a healthcare professional for clinical advice.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const API = window.location.origin;
+let sessionId = null;
+let sessionStatus = 'active';
+
+const chatContainer = document.getElementById('chat-container');
+const typingIndicator = document.getElementById('typing');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+userInput.addEventListener('input', () => { if (userInput.value) setRobotState('listening'); });
+
+// Rive avatar: drop a file at /static/sakhi.riv; the built-in SVG robot shows until then.
+// Boolean inputs named listening / processing / speaking are set if present.
+const RIVE_SRC = '/static/sakhi.riv';
+const RIVE_STATE_MACHINE = 'State Machine 1';
+let riveInputs = {};
+(function initRive() {
+  if (!window.rive) return;
+  const canvas = document.getElementById('rive-avatar');
+  try {
+    const r = new rive.Rive({
+      src: RIVE_SRC,
+      canvas,
+      autoplay: true,
+      stateMachines: RIVE_STATE_MACHINE,
+      onLoad: () => {
+        r.resizeDrawingSurfaceToCanvas();
+        canvas.style.display = 'block';
+        document.getElementById('robot-fallback').style.display = 'none';
+        (r.stateMachineInputs(RIVE_STATE_MACHINE) || []).forEach((i) => { riveInputs[i.name] = i; });
+      },
+      onLoadError: () => { canvas.style.display = 'none'; },
+    });
+  } catch (e) { canvas.style.display = 'none'; }
+})();
+
+// state: 'idle' | 'listening' | 'processing' | 'speaking'
+function setRobotState(state) {
+  document.getElementById('robot-pane').dataset.state = state;
+  ['listening', 'processing', 'speaking'].forEach((n) => {
+    if (riveInputs[n]) riveInputs[n].value = (state === n);
+  });
+}
+
+function addMessage(text, role) {
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.textContent = text;
+  chatContainer.insertBefore(div, typingIndicator);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function rollText(div, text, msPerWord) {
+  return new Promise(resolve => {
+    const words = text.split(/\s+/).filter(Boolean);
+    if (!words.length) { resolve(); return; }
+    let i = 0;
+    function tick() {
+      div.textContent += (i ? ' ' : '') + words[i];
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+      if (++i < words.length) setTimeout(tick, msPerWord);
+      else resolve();
+    }
+    tick();
+  });
+}
+
+function addMessages(text, role) {
+  if (role !== 'sakhi') { addMessage(text, role); return Promise.resolve(); }
+  const chunks = text.split(/\n\n+/).map(s => s.trim()).filter(Boolean);
+  if (!chunks.length) return Promise.resolve();
+  const MS_PER_WORD = 180;
+  const PAUSE = 600;
+  return new Promise(resolve => {
+    let i = 0;
+    function nextChunk() {
+      if (i >= chunks.length) { setRobotState('idle'); resolve(); return; }
+      setRobotState('speaking');
+      const div = document.createElement('div');
+      div.className = 'message sakhi';
+      chatContainer.insertBefore(div, typingIndicator);
+      rollText(div, chunks[i], MS_PER_WORD).then(() => {
+        if (++i < chunks.length) setTimeout(nextChunk, PAUSE);
+        else resolve();
+      });
+    }
+    nextChunk();
+  });
+}
+
+function showTyping(show) {
+  typingIndicator.style.display = show ? 'block' : 'none';
+  setRobotState(show ? 'processing' : 'idle');
+  if (show) chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function setInputEnabled(enabled) {
+  userInput.disabled = !enabled;
+  sendBtn.disabled = !enabled;
+  if (enabled) userInput.focus();
+}
+
+function renderRiskResult(result) {
+  const pct = (result.risk_probability * 100).toFixed(1);
+  const levelLabel = result.risk_level.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  const wrap = document.createElement('div');
+  wrap.className = 'riskometer';
+
+  let html = `<div class="riskometer-title">Your Risk Assessment</div>`;
+  html += `<div class="riskometer-bar-wrap">`;
+  html += `<div class="riskometer-bar">`;
+  html += `<div class="riskometer-seg riskometer-seg-baseline">Baseline</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-evident">Evident</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-significant">Significant</div>`;
+  html += `<div class="riskometer-seg riskometer-seg-high">High</div>`;
+  html += `</div>`;
+  html += `<div class="riskometer-marker" style="left:${pct}%">`;
+  html += `<span class="riskometer-marker-label">${pct}% — ${levelLabel}</span>`;
+  html += `</div></div>`;
+
+  html += `<div class="riskometer-details">`;
+  if (result.key_risk_factors && result.key_risk_factors.length) {
+    html += '<h3>Key Risk Factors</h3><ul>';
+    result.key_risk_factors.forEach(f => { html += `<li class="risk-factor">${f.factor}: ${f.detail || f.value || ''}</li>`; });
+    html += '</ul>';
+  }
+  if (result.protective_factors && result.protective_factors.length) {
+    html += '<h3>Protective Factors</h3><ul>';
+    result.protective_factors.forEach(f => { html += `<li class="protective-factor">${f.factor}: ${f.detail || f.value || ''}</li>`; });
+    html += '</ul>';
+  }
+  if (result.recommendations && result.recommendations.length) {
+    html += '<h3>Recommendations</h3><ul>';
+    result.recommendations.forEach(r => { html += `<li class="recommendation">${r}</li>`; });
+    html += '</ul>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+
+  const btn = document.createElement('button');
+  btn.className = 'new-session-btn';
+  btn.textContent = 'Start New Assessment';
+  btn.onclick = () => { window.location.href = '/'; };
+  wrap.appendChild(btn);
+
+  chatContainer.insertBefore(wrap, typingIndicator);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+async function startSession() {
+  showTyping(true);
+  setInputEnabled(false);
+  try {
+    const res = await fetch(`${API}/api/v1/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: 'web', voice: false }),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    sessionId = data.session_id;
+    sessionStatus = data.session_status;
+    showTyping(false);
+    await addMessages(data.response, 'sakhi');
+    setInputEnabled(true);
+  } catch (err) {
+    showTyping(false);
+    const div = document.createElement('div');
+    div.className = 'error-msg';
+    div.textContent = 'Could not start session. Please refresh to try again.';
+    chatContainer.insertBefore(div, typingIndicator);
+  }
+}
+
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text || !sessionId) return;
+  userInput.value = '';
+  addMessage(text, 'user');
+  setInputEnabled(false);
+  showTyping(true);
+  try {
+    const res = await fetch(`${API}/api/v1/sessions/${sessionId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text }),
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+    showTyping(false);
+    await addMessages(data.response, 'sakhi');
+    sessionStatus = data.session_status;
+    if (sessionStatus === 'completed') {
+      try {
+        const rr = await fetch(`${API}/api/v1/sessions/${sessionId}/result`);
+        if (rr.ok) renderRiskResult(await rr.json());
+      } catch (e) {}
+    } else {
+      setInputEnabled(true);
+    }
+  } catch (err) {
+    showTyping(false);
+    const div = document.createElement('div');
+    div.className = 'error-msg';
+    div.textContent = 'Something went wrong. Please try again.';
+    chatContainer.insertBefore(div, typingIndicator);
+    setInputEnabled(true);
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+startSession();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');
+</script>
+</body>
+</html>

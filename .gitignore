@@ -1,0 +1,41 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+env/
+.venv/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Credentials
+*.pem
+gcp-service-account.json
+
+# Pytest
+.pytest_cache/
+
+# Idea folder — research docs, not for production
+# (uncomment the line below if you want to exclude from git)
+# idea/

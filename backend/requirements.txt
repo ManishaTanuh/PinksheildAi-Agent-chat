@@ -1,0 +1,17 @@
+fastapi
+python-multipart
+uvicorn
+sqlalchemy
+pymysql
+python-dotenv
+cloud-sql-python-connector[pymysql]
+google-auth
+anthropic[vertex]
+openai
+google-genai
+pydantic
+httpx
+pytest
+google-cloud-speech>=2.29.0
+google-cloud-texttospeech>=2.21.0
+google-cloud-secret-manager>=2.21.0
