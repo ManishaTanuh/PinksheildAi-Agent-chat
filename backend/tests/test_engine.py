@@ -4,7 +4,6 @@ from src.engine.factors import FACTORS_BY_ID, TIER_1_ORDER, TIER_1_FACTORS
 from src.engine.validation import validate_answer
 from src.engine.risk_model import compute_risk
 
-
 class TestFactorRegistry:
     def test_all_tier1_factors_present(self):
         expected_ids = [
