@@ -483,7 +483,41 @@
     .footer-address, .footer-contact { text-align: center; }
     .footer-contact-lines { align-items: center; }
   }
+  #main-split { flex: 1; display: flex; min-height: 0; }
+  #robot-pane {
+    flex: 1 1 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, #DAF3F4 0%, #f0fafa 100%);
+    border-right: 1px solid #c8e8ea;
+    padding: 16px; min-width: 0;
+  }
+  #chat-pane { flex: 1 1 50%; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #rive-avatar { display: none; width: 100%; height: 100%; max-width: 520px; max-height: 520px; }
+  #robot-fallback { width: 70%; max-width: 360px; animation: robot-float 3s ease-in-out infinite; }
+  @keyframes robot-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+  @keyframes robot-blink { 0%,92%,100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+  @keyframes robot-talk { 0%,100% { transform: scaleY(0.3); } 50% { transform: scaleY(1.2); } }
+  @keyframes robot-ant { 0%,100% { fill: #f9a8d4; } 50% { fill: #ec4899; } }
+  #robot-fallback .eye { transform-box: fill-box; transform-origin: center; animation: robot-blink 4s infinite; }
+  #robot-fallback .mouth { transform-box: fill-box; transform-origin: center; transform: scaleY(0.3); }
+  #robot-fallback .ant { animation: robot-ant 2s infinite; }
+  #robot-pane[data-state="speaking"] .mouth { animation: robot-talk 0.35s infinite; }
+  #robot-pane[data-state="listening"] .ant { animation-duration: 0.5s; }
+  #robot-pane[data-state="processing"] #robot-fallback { animation-duration: 0.8s; }
+  @media (max-width: 760px) {
+    #main-split { flex-direction: column; }
+    #robot-pane { flex: 0 0 30%; border-right: none; border-bottom: 1px solid #c8e8ea; }
+    #robot-fallback { width: auto; height: 100%; }
+  }
+  #chat-pane #main-content { flex: 1; }
+  #robot-pane { min-height: 420px; }
+  @media (max-width: 760px) { #robot-pane { min-height: 0; } }
 </style>
+<script src="https://unpkg.com/@rive-app/canvas@2"></script>
+<script>
+  // ?avatar=b shows version B; default is version A (Sakhi character).
+  document.write('<script src="/static/' + (new URLSearchParams(location.search).get('avatar') === 'b' ? 'sakhi-text-b.js' : 'sakhi-text-a.js') + '"><\/script>');
+</script>
 </head>
 <body>
 <header>
@@ -498,6 +532,12 @@
   </div>
 </header>
 
+<div id="main-split">
+<div id="robot-pane" data-state="idle">
+  <canvas id="rive-avatar" width="520" height="520"></canvas>
+  <div id="robot-fallback"></div>
+</div>
+<div id="chat-pane">
 <div class="progress-wrap" id="progress-wrap" style="display:none">
   <div class="progress-text">
     <span id="progress-label">Question 1</span>
@@ -513,6 +553,8 @@
     <div class="spinner"></div>
     <div class="loading-text">Starting your assessment...</div>
   </div>
+</div>
+</div>
 </div>
 
 <footer class="site-footer">
@@ -568,6 +610,39 @@ const progressLabel = document.getElementById('progress-label');
 const progressPct = document.getElementById('progress-pct');
 const progressFill = document.getElementById('progress-fill');
 
+// Rive avatar: drop a file at /static/sakhi.riv; the built-in SVG robot shows until then.
+// Boolean inputs named listening / processing / speaking are set if present.
+const RIVE_SRC = '/static/sakhi.riv';
+const RIVE_STATE_MACHINE = 'State Machine 1';
+let riveInputs = {};
+(function initRive() {
+  if (!window.rive) return;
+  const canvas = document.getElementById('rive-avatar');
+  try {
+    const r = new rive.Rive({
+      src: RIVE_SRC,
+      canvas,
+      autoplay: true,
+      stateMachines: RIVE_STATE_MACHINE,
+      onLoad: () => {
+        r.resizeDrawingSurfaceToCanvas();
+        canvas.style.display = 'block';
+        document.getElementById('robot-fallback').style.display = 'none';
+        (r.stateMachineInputs(RIVE_STATE_MACHINE) || []).forEach((i) => { riveInputs[i.name] = i; });
+      },
+      onLoadError: () => { canvas.style.display = 'none'; },
+    });
+  } catch (e) { canvas.style.display = 'none'; }
+})();
+
+// state: 'idle' | 'listening' | 'processing' | 'speaking'
+function setRobotState(state) {
+  document.getElementById('robot-pane').dataset.state = state;
+  ['listening', 'processing', 'speaking'].forEach((n) => {
+    if (riveInputs[n]) riveInputs[n].value = (state === n);
+  });
+}
+
 function updateProgress(progress) {
   if (!progress) return;
   progressWrap.style.display = 'block';
@@ -575,11 +650,14 @@ function updateProgress(progress) {
   progressLabel.textContent = `Question ${progress.answered + 1} of ${progress.total}`;
   progressPct.textContent = `${pct}%`;
   progressFill.style.width = `${pct}%`;
+  if (window.skSetProgress) skSetProgress(pct);
   questionNumber = progress.answered + 1;
 }
 
 function renderQuestion(q) {
   currentQuestion = q;
+  setRobotState('speaking');
+  setTimeout(() => setRobotState('idle'), 2500);
   selectedValue = null;
 
   if (q.status === 'assessment_complete') {
@@ -706,6 +784,8 @@ function renderTextInput(wrap, q) {
 }
 
 function enableNext() {
+  setRobotState('listening');
+  setTimeout(() => setRobotState('idle'), 1500);
   const btn = document.getElementById('next-btn');
   if (btn) btn.disabled = false;
 }
@@ -715,6 +795,7 @@ async function submitAnswer() {
   const btn = document.getElementById('next-btn');
   btn.disabled = true;
   btn.textContent = 'Saving...';
+  setRobotState('processing');
 
   try {
     const res = await fetch(`${API}/api/v1/sessions/${sessionId}/answer`, {
