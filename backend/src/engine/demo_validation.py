@@ -3,6 +3,7 @@
 Mirrors the rules enforced in chat.html. Returns (clean_answers, errors); stale answers
 for questions that are not applicable are dropped so they cannot affect the result.
 """
+import re
 
 YN = ("Yes", "No", "Don't know")
 NEVER = "Never had a baby/Full time pregnancy"
@@ -13,15 +14,13 @@ CANCER_TYPES = ("Breast Cancer", "Ovarian Cancer", "Colorectal Cancer", "Pancrea
 WHO = ("First Order (Mother, Sibling, Father)", "Second Order (Related to Mother/Father)", "I don't know")
 
 
-def _int(v, lo, hi):
-    """Return (int|None, error|None)."""
-    try:
-        s = str(v).strip()
-        if not s.lstrip("-").isdigit():
-            raise ValueError
-        n = int(s)
-    except (TypeError, ValueError):
+def _num(v, lo, hi, decimal=True):
+    """Return (number|None, error|None). Decimals are accepted unless decimal=False."""
+    s = str(v).strip().replace(",", ".")
+    pattern = r"-?\d+(\.\d+)?" if decimal else r"-?\d+"
+    if isinstance(v, bool) or not re.fullmatch(pattern, s):
         return None, "Please enter a valid number."
+    n = float(s) if "." in s else int(s)
     if not lo <= n <= hi:
         return None, f"Please enter a number between {lo} and {hi}."
     return n, None
@@ -36,12 +35,12 @@ def validate(a: dict) -> tuple[dict, dict]:
     out: dict = {}
     err: dict = {}
 
-    def numeric(key, lo, hi, specials=()):
+    def numeric(key, lo, hi, specials=(), decimal=True):
         v = a.get(key)
         if v in specials:
             out[key] = v
             return v
-        n, e = _int(v, lo, hi) if v not in (None, "") else (None, "This question is required.")
+        n, e = _num(v, lo, hi, decimal) if v not in (None, "") else (None, "This question is required.")
         if e:
             err[key] = e
         else:
@@ -85,7 +84,7 @@ def validate(a: dict) -> tuple[dict, dict]:
     if q5b == NEVER:
         out["q5_count"] = 0  # auto; Q5A skipped, Q6 excluded
     elif q5b is not None:
-        numeric("q5_count", 0, 20)
+        numeric("q5_count", 0, 20, decimal=False)
         numeric("q6", 0, 400)
 
     choice("q7", YN)

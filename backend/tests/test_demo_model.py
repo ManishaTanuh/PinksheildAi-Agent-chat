@@ -59,3 +59,18 @@ def test_basic_details_ranges():
     assert validate({**BASE, "age": 17})[1]["age"] == "Please enter a number between 18 and 95."
     assert validate({**BASE, "height_cm": 220})[1]["height_cm"] == "Please enter a number between 130 and 200."
     assert validate({**BASE, "weight_kg": "x"})[1]["weight_kg"] == "Please enter a valid number."
+
+
+def test_personal_high_related_cancer_forces_high():
+    r = predict({**LOW, "q9": "Yes", "q9_type": "Breast Cancer"})
+    assert r["risk_class"] == "HIGH_RISK" and r["cancer_history_override"]
+    # a mid/other-related type is not forced
+    assert not predict({**LOW, "q9": "Yes", "q9_type": "Thyroid Cancer"})["cancer_history_override"]
+
+
+def test_decimals_accepted_except_pregnancy_count():
+    clean, err = validate({**BASE, "height_cm": "158.5", "weight_kg": 62.3, "age": "41.5", "q6": "7,5"})
+    assert not err and clean["height_cm"] == 158.5 and clean["weight_kg"] == 62.3 and clean["q6"] == 7.5
+    assert validate({**BASE, "q5_count": "2.5"})[1]["q5_count"] == "Please enter a valid number."
+    assert validate({**BASE, "height_cm": "129.9"})[1]["height_cm"] == "Please enter a number between 130 and 200."
+    assert validate({**BASE, "weight_kg": "1.2.3"})[1]["weight_kg"] == "Please enter a valid number."

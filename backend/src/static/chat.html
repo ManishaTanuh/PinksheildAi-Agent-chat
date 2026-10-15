@@ -697,7 +697,7 @@ const STEPS = [
   { key: 'q4', n: 4, kind: 'choice', options: YNDK,
     text: 'Have you ever used any of these to prevent pregnancy? Birth-control pills (e.g. MALA D, MALA N), birth-control injections, hormonal IUD (e.g. Mirena), emergency pills (i-Pill, E-Pill), any other hormonal method, or menopausal hormone replacement therapy. Do NOT count Copper-T, condoms, diaphragm, tubectomy or tubal ligation.' },
   { key: 'q5_age', n: 5, kind: 'number', min: 12, max: 55, special: [NEVER], text: 'How old were you when you had your first baby?' },
-  { key: 'q5_count', n: 5, kind: 'number', min: 0, max: 20, when: a => a.q5_age !== NEVER,
+  { key: 'q5_count', n: 5, kind: 'number', integer: true, min: 0, max: 20, when: a => a.q5_age !== NEVER,
     text: 'How many of your pregnancies continued until about 9 months? Include live births and stillbirths. Do not include abortions or miscarriages.' },
   { key: 'q6', n: 6, kind: 'number', min: 0, max: 400, when: a => a.q5_age !== NEVER,
     text: 'For how many months altogether did you breastfeed your children (all children added together)? Enter 0 if never.' },
@@ -733,9 +733,10 @@ function setProgress(step, done) {
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
 
 function validNumber(step, raw) {
-  const s = String(raw).trim();
-  if (!/^-?\d+$/.test(s)) return { error: 'Please enter a valid number.' };
-  const n = parseInt(s, 10);
+  const s = String(raw).trim().replace(',', '.');
+  const ok = step.integer ? /^-?\d+$/.test(s) : /^-?\d+(\.\d+)?$/.test(s);   // decimals allowed unless step.integer
+  if (!ok) return { error: 'Please enter a valid number.' };
+  const n = Number(s);
   if (n < step.min || n > step.max) return { error: `Please enter a number between ${step.min} and ${step.max}.` };
   return { value: n };
 }
@@ -760,7 +761,7 @@ function renderStep(step) {
     panel.appendChild(chips);
   } else if (step.kind === 'number') {
     const row = el('div', 'num-row');
-    const inp = el('input'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.placeholder = `Enter a number (${step.min}–${step.max})` + ({ age: ' years', height_cm: ' cm', weight_kg: ' kg' }[step.key] || ''); inp.autocomplete = 'off';
+    const inp = el('input'); inp.type = 'text'; inp.inputMode = step.integer ? 'numeric' : 'decimal'; inp.placeholder = `Enter a number (${step.min}–${step.max})` + ({ age: ' years', height_cm: ' cm', weight_kg: ' kg' }[step.key] || ''); inp.autocomplete = 'off';
     const next = el('button', 'chip primary', 'Next');
     const err = el('p', 'q-error');
     const go = () => {
