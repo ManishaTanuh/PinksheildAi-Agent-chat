@@ -338,11 +338,48 @@
     #robot-pane { flex: 0 0 30%; border-right: none; border-bottom: 1px solid #c8e8ea; }
     #robot-fallback { width: auto; height: 100%; }
   }
+
+  /* ---- structured questionnaire (default mode) ---- */
+  #q-progress { padding: 8px 16px 0; font-size: 12px; color: #0f6b70; font-weight: 600; background: #fff; display: none; }
+  #q-progress .bar { height: 6px; border-radius: 3px; background: #d3ecee; margin-top: 4px; overflow: hidden; }
+  #q-progress .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#14868C,#ec4899); transition: width .4s; }
+  #answer-panel { display: none; padding: 12px 16px; background: #fff; border-top: 1px solid #c8e8ea; flex-shrink: 0; max-height: 45vh; overflow-y: auto; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { padding: 10px 16px; border: 2px solid #14868C; background: #fff; color: #0f6b70; border-radius: 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .chip:hover { background: #e8f7f8; }
+  .chip:disabled { opacity: .5; cursor: not-allowed; }
+  .chip.primary { background: linear-gradient(135deg,#14868C,#0f6b70); color: #fff; border-color: transparent; }
+  .num-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .num-row input, .txt-input { flex: 1; padding: 11px 14px; border: 2px solid #c8e8ea; border-radius: 22px; font-size: 15px; outline: none; width: 100%; }
+  .num-row input:focus, .txt-input:focus { border-color: #14868C; }
+  .q-error { color: #b91c1c; font-size: 13px; margin: 0 0 8px 4px; min-height: 0; }
+  .group-label { font-size: 12px; font-weight: 700; color: #5f7a7c; text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 4px; }
+  .check { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 14px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; accent-color: #14868C; }
+  .result-card { align-self: stretch; max-width: 95%; border-radius: 16px; padding: 22px; text-align: center; border: 2px solid; animation: fadeIn .4s ease; }
+  .result-card h2 { font-size: 26px; margin-bottom: 6px; }
+  .result-card p { font-size: 15px; margin-bottom: 16px; }
+  .result-card.high { background: #fef2f2; border-color: #dc2626; color: #991b1b; }
+  .result-card.low { background: #f0fdf4; border-color: #16a34a; color: #166534; }
+  .result-card .chip { margin-top: 4px; }
+
+  /* ---- larger chat area: taller and wider (footer now sits below the fold) ---- */
+  body { height: auto; min-height: 100dvh; }
+  #main-split { flex: 0 0 auto; height: calc(100dvh - 64px); min-height: 680px; }
+  #robot-pane { flex: 0 0 34%; }
+  #chat-pane { flex: 1 1 66%; }
+  .message { max-width: 88%; }
+  /* tablet + mobile: stack the character above the chat and always keep it visible */
+  @media (max-width: 900px) {
+    #main-split { flex-direction: column; height: auto; min-height: calc(100dvh - 64px); }
+    #robot-pane { flex: none; height: clamp(140px, 28vh, 300px); min-height: 0; padding: 8px; border-right: none; border-bottom: 1px solid #c8e8ea; overflow: hidden; }
+    #chat-pane { flex: 1 1 auto; min-height: 60vh; }
+  }
 </style>
 <script src="https://unpkg.com/@rive-app/canvas@2"></script>
 <script>
-  // ?avatar=b shows version B; default is version A (Sakhi character).
-  document.write('<script src="/static/' + (new URLSearchParams(location.search).get('avatar') === 'b' ? 'sakhi-avatar-b.js' : 'sakhi-avatar.js') + '"><\/script>');
+  // Default: illustrated character. ?avatar=a or ?avatar=b show the older versions A / B.
+  document.write('<script src="/static/' + ({a: 'sakhi-avatar.js', b: 'sakhi-avatar-b.js'}[new URLSearchParams(location.search).get('avatar')] || 'sakhi-character.js') + '"><\/script>');
 </script>
 </head>
 <body>
@@ -370,6 +407,8 @@
   </div>
 </div>
 
+<div id="q-progress"><span id="q-progress-text"></span><div class="bar"><i id="q-progress-bar"></i></div></div>
+<div id="answer-panel"></div>
 <div id="input-area">
   <input type="text" id="user-input" placeholder="Type your response..." disabled autocomplete="off">
   <button id="send-btn" disabled>Send</button>
@@ -389,7 +428,7 @@
       <div class="footer-contact">
         <strong>Contact Information</strong>
         <div class="footer-contact-lines">
-          <div>Study: <a href="mailto:breastcancerdetection@tanuh.ai">breastcancerdetection@tanuh.ai</a></div>
+          <div>Study: <a href="mailto:breastcancerscreening@tanuh.ai">breastcancerscreening@tanuh.ai</a></div>
           <div>General: <a href="mailto:info@tanuh.ai">info@tanuh.ai</a></div>
           <div class="footer-tel">Tel: (080) 2293 4106 &nbsp;|&nbsp; (080) 2293 4107</div>
         </div>
@@ -632,7 +671,215 @@ userInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
-startSession();
+// =====================================================================
+// Structured, click-through questionnaire (default). Use ?mode=ai for the original AI chat.
+// =====================================================================
+const STRUCTURED = new URLSearchParams(location.search).get('mode') !== 'ai';
+const DK = "Don't know", NA = 'Not applicable', NEVER = 'Never had a baby/Full time pregnancy';
+const YNDK = ['Yes', 'No', DK];
+const CANCERS_ALL = ['Breast Cancer', 'Ovarian Cancer', 'Colorectal Cancer', 'Pancreatic Cancer', 'Uterine Cancer', 'Thyroid Cancer', 'Others', DK];
+const CANCER_GROUPS = [
+  { label: 'High Related', options: ['Breast Cancer', 'Ovarian Cancer', 'Colorectal Cancer', 'Pancreatic Cancer'] },
+  { label: 'Mid Related', options: ['Uterine Cancer', 'Thyroid Cancer'] },
+  { label: 'Other options', options: ['Others', DK] },
+];
+// n = displayed question number (of 10)
+const STEPS = [
+  { key: 'age', n: 0, d: 1, kind: 'number', min: 18, max: 95, text: 'First, a few basic details. What is your age (in years)?' },
+  { key: 'height_cm', n: 0, d: 2, kind: 'number', min: 130, max: 200, text: 'What is your height (in cm)?' },
+  { key: 'weight_kg', n: 0, d: 3, kind: 'number', min: 30, max: 150, text: 'What is your weight (in kg)?' },
+  { key: 'q1_age', n: 1, kind: 'number', min: 8, max: 25, special: [DK], text: 'How old were you when you got your first period?' },
+  { key: 'q2_age', n: 2, kind: 'number', min: 20, max: 70, special: [NA, DK], specialLabels: { [NA]: 'Not applicable (still has periods)' },
+    text: 'How old were you when your periods stopped completely? If you had an operation to remove your uterus or ovaries, give your age at the operation.' },
+  { key: 'q3a', n: 3, kind: 'choice', options: YNDK, when: a => a.q2_age === NA,
+    text: 'Have you ever had irregular periods? (e.g. very early, very late, or sometimes not coming at all)' },
+  { key: 'q3b', n: 3, kind: 'choice', options: YNDK, text: 'Has a doctor ever told you that you have PCOS (polycystic ovary syndrome)?' },
+  { key: 'q4', n: 4, kind: 'choice', options: YNDK,
+    text: 'Have you ever used any of these to prevent pregnancy? Birth-control pills (e.g. MALA D, MALA N), birth-control injections, hormonal IUD (e.g. Mirena), emergency pills (i-Pill, E-Pill), any other hormonal method, or menopausal hormone replacement therapy. Do NOT count Copper-T, condoms, diaphragm, tubectomy or tubal ligation.' },
+  { key: 'q5_age', n: 5, kind: 'number', min: 12, max: 55, special: [NEVER], text: 'How old were you when you had your first baby?' },
+  { key: 'q5_count', n: 5, kind: 'number', min: 0, max: 20, when: a => a.q5_age !== NEVER,
+    text: 'How many of your pregnancies continued until about 9 months? Include live births and stillbirths. Do not include abortions or miscarriages.' },
+  { key: 'q6', n: 6, kind: 'number', min: 0, max: 400, when: a => a.q5_age !== NEVER,
+    text: 'For how many months altogether did you breastfeed your children (all children added together)? Enter 0 if never.' },
+  { key: 'q7', n: 7, kind: 'choice', options: YNDK,
+    text: 'Have you ever taken medicines or had treatment to help you become pregnant (fertility medicines, injections, IVF, ICSI, traditional medicines, etc.)?' },
+  { key: 'q8', n: 8, kind: 'choice', options: YNDK,
+    text: 'Have you ever had a breast problem, a test where a small piece of breast tissue was taken, or an operation on your breast?' },
+  { key: 'q8_detail', n: 8, kind: 'text', when: a => a.q8 === 'Yes', text: 'Please tell us what happened.' },
+  { key: 'q9', n: 9, kind: 'choice', options: YNDK, text: 'Has a doctor ever told you that you have had cancer?' },
+  { key: 'q9_type', n: 9, kind: 'multi', groups: [{ label: '', options: CANCERS_ALL }], other: 'q9_type_other', when: a => a.q9 === 'Yes', text: 'What type of cancer? (select all that apply)' },
+  { key: 'q10', n: 10, kind: 'choice', options: YNDK, text: 'Has anyone in your family ever had cancer?' },
+  { key: 'q10_who', n: 10, kind: 'choice', options: ['First Order (Mother, Sibling, Father)', 'Second Order (Related to Mother/Father)', "I don't know"], when: a => a.q10 === 'Yes', text: 'Who in your family had cancer?' },
+  { key: 'q10_type', n: 10, kind: 'multi', groups: CANCER_GROUPS, other: 'q10_type_other', when: a => a.q10 === 'Yes', text: 'What type of cancer did your family member have? (select all that apply)' },
+];
+const TOTAL_Q = 10;
+let answers = {}, stepIdx = -1, locked = false;
+
+const panel = document.getElementById('answer-panel');
+const qProgress = document.getElementById('q-progress');
+
+function botSay(text) {
+  setRobotState('speaking');
+  addMessage(text, 'sakhi');
+  setTimeout(() => setRobotState('listening'), 900);
+}
+function setProgress(step, done) {
+  qProgress.style.display = 'block';
+  const n = done ? TOTAL_Q : step.n;
+  document.getElementById('q-progress-text').textContent = done ? 'Assessment complete'
+    : (step.d ? `Basic details ${step.d} of 3` : `Question ${n} of ${TOTAL_Q}`);
+  document.getElementById('q-progress-bar').style.width = (done ? 100 : step.d ? 0 : ((n - 1) / TOTAL_Q) * 100) + '%';
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
+function validNumber(step, raw) {
+  const s = String(raw).trim();
+  if (!/^-?\d+$/.test(s)) return { error: 'Please enter a valid number.' };
+  const n = parseInt(s, 10);
+  if (n < step.min || n > step.max) return { error: `Please enter a number between ${step.min} and ${step.max}.` };
+  return { value: n };
+}
+
+function submitAnswer(step, value, shown) {
+  if (locked) return;       // prevents duplicate submissions
+  locked = true;
+  answers[step.key] = value;
+  addMessage(shown !== undefined ? shown : String(value), 'user');
+  panel.innerHTML = '';
+  if (step.key === 'q5_age' && value === NEVER) answers.q5_count = 0;   // Q5A skipped, q5_count = 0
+  setTimeout(nextStep, 350);
+}
+
+function renderStep(step) {
+  panel.innerHTML = '';
+  panel.style.display = 'block';
+  setProgress(step);
+  if (step.kind === 'choice') {
+    const chips = el('div', 'chips');
+    step.options.forEach(o => { const b = el('button', 'chip', o); b.onclick = () => submitAnswer(step, o); chips.appendChild(b); });
+    panel.appendChild(chips);
+  } else if (step.kind === 'number') {
+    const row = el('div', 'num-row');
+    const inp = el('input'); inp.type = 'text'; inp.inputMode = 'numeric'; inp.placeholder = `Enter a number (${step.min}–${step.max})` + ({ age: ' years', height_cm: ' cm', weight_kg: ' kg' }[step.key] || ''); inp.autocomplete = 'off';
+    const next = el('button', 'chip primary', 'Next');
+    const err = el('p', 'q-error');
+    const go = () => {
+      const r = validNumber(step, inp.value);
+      if (r.error) { err.textContent = r.error; inp.focus(); return; }
+      submitAnswer(step, r.value);
+    };
+    next.onclick = go;
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+    inp.addEventListener('input', () => { err.textContent = ''; });
+    row.append(inp, next);
+    panel.append(row, err);
+    if (step.special && step.special.length) {
+      const chips = el('div', 'chips');
+      step.special.forEach(o => { const b = el('button', 'chip', (step.specialLabels || {})[o] || o); b.onclick = () => submitAnswer(step, o, (step.specialLabels || {})[o] || o); chips.appendChild(b); });
+      panel.appendChild(chips);
+    }
+    inp.focus();
+  } else if (step.kind === 'text') {
+    const inp = el('textarea', 'txt-input'); inp.rows = 2; inp.maxLength = 500; inp.placeholder = 'Type here...';
+    inp.style.borderRadius = '14px';
+    const next = el('button', 'chip primary', 'Next'); next.style.marginTop = '8px';
+    next.onclick = () => submitAnswer(step, inp.value.trim() || '(no details given)', inp.value.trim() || '(no details given)');
+    panel.append(inp, next);
+    inp.focus();
+  } else if (step.kind === 'multi') {
+    const err = el('p', 'q-error');
+    const boxes = [];
+    step.groups.forEach(g => {
+      if (g.label) panel.appendChild(el('div', 'group-label', g.label));
+      g.options.forEach(o => {
+        const lab = el('label', 'check'); const cb = el('input'); cb.type = 'checkbox'; cb.value = o;
+        lab.append(cb, document.createTextNode(o)); panel.appendChild(lab); boxes.push(cb);
+      });
+    });
+    const other = el('input', 'txt-input'); other.placeholder = 'Please specify the cancer type'; other.style.display = 'none'; other.style.marginTop = '6px';
+    boxes.forEach(cb => cb.addEventListener('change', () => {
+      err.textContent = '';
+      other.style.display = boxes.some(b => b.checked && b.value === 'Others') ? 'block' : 'none';
+    }));
+    const next = el('button', 'chip primary', 'Next'); next.style.marginTop = '8px';
+    next.onclick = () => {
+      const sel = boxes.filter(b => b.checked).map(b => b.value);
+      if (!sel.length) { err.textContent = 'Please select at least one option.'; return; }
+      if (sel.includes('Others')) {
+        if (!other.value.trim()) { err.textContent = 'Please specify the cancer type.'; other.focus(); return; }
+        answers[step.other] = other.value.trim();
+      }
+      submitAnswer(step, sel.join(','), sel.join(', ') + (sel.includes('Others') ? ` (${other.value.trim()})` : ''));
+    };
+    panel.append(other, err, next);
+  }
+  panel.scrollTop = 0;
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function nextStep() {
+  locked = false;
+  do { stepIdx++; } while (stepIdx < STEPS.length && STEPS[stepIdx].when && !STEPS[stepIdx].when(answers));
+  if (stepIdx >= STEPS.length) return finishAssessment();
+  const step = STEPS[stepIdx];
+  botSay(step.text);
+  renderStep(step);
+}
+
+async function finishAssessment() {
+  panel.innerHTML = ''; panel.style.display = 'none';
+  setProgress(null, true);
+  showTyping(true);
+  try {
+    const res = await fetch(`${API}/api/v1/demo/assess`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers }) });
+    const data = await res.json();
+    showTyping(false);
+    if (res.status === 422) {
+      // Server rejected something the UI should have caught: surface it and restart that question.
+      const bad = Object.keys(data.errors)[0];
+      addMessage(data.errors[bad], 'sakhi');
+      const i = STEPS.findIndex(s => s.key === bad || s.other === bad);
+      if (i >= 0) { stepIdx = i - 1; delete answers[STEPS[i].key]; return nextStep(); }
+      return;
+    }
+    if (!res.ok) throw new Error(res.status);
+    renderResultCard(data);
+  } catch (e) {
+    showTyping(false);
+    const d = el('div', 'error-msg', 'Something went wrong while calculating the result. Please try again.');
+    chatContainer.insertBefore(d, typingIndicator);
+    const b = el('button', 'chip primary', 'Retry'); b.onclick = () => { d.remove(); b.remove(); finishAssessment(); };
+    chatContainer.insertBefore(b, typingIndicator);
+  }
+}
+
+function renderResultCard(r) {
+  const high = r.risk_class === 'HIGH_RISK';
+  const card = el('div', 'result-card ' + (high ? 'high' : 'low'));
+  card.append(el('h2', '', high ? 'High Risk' : 'Low Risk'),
+              el('p', '', high ? 'Priority for screening' : 'Screening recommendation based on assessment'));
+  const b = el('button', 'chip primary', 'New assessment');
+  b.onclick = resetAssessment;
+  card.appendChild(b);
+  chatContainer.insertBefore(card, typingIndicator);
+  chatContainer.scrollTop = chatContainer.scrollHeight;
+  setRobotState('idle');
+}
+
+function resetAssessment() {
+  answers = {}; stepIdx = -1; locked = false;
+  [...chatContainer.children].forEach(c => { if (c !== typingIndicator) c.remove(); });
+  panel.innerHTML = '';
+  startAssessment();
+}
+
+function startAssessment() {
+  document.getElementById('input-area').style.display = 'none';
+  botSay("Hi! I'm PinkShield AI. Ask me anything to take help.");
+  setTimeout(nextStep, 700);
+}
+
+if (STRUCTURED) startAssessment(); else startSession();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('/static/sw.js');
 </script>
 </body>

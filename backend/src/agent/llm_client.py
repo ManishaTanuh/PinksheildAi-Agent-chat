@@ -96,11 +96,14 @@ def generate_greeting(db: DBSession, session_id: str) -> dict:
         return {"error": "Session not found"}
 
     first_q = engine.get_next_question()
+    # Previous greeting instruction (disabled, kept for reference):
+    # "Greet the user warmly, briefly explain what this assessment is about (a quick health check-in about
+    #  breast health, takes about 4 minutes, all answers are confidential), and then naturally lead into the first question."
     context = f"""This is a brand new session. The user just started the assessment.
 The first question to ask is: {first_q['question']}
 Factor ID: {first_q['factor_id']}, Data type: {first_q['data_type']}, Options: {first_q.get('options')}
 
-Greet the user warmly, briefly explain what this assessment is about (a quick health check-in about breast health, takes about 4 minutes, all answers are confidential), and then naturally lead into the first question."""
+Begin your reply with exactly this greeting: "Hi! I'm PinkShield AI. Ask me anything to take help." Do not explain what the assessment is, how long it takes, or that it is confidential, and do not say you are not a doctor. Right after the greeting, simply ask the first question."""
 
     provider = get_provider()
     model = settings.LLM_MODEL

@@ -504,19 +504,19 @@
   #robot-pane[data-state="speaking"] .mouth { animation: robot-talk 0.35s infinite; }
   #robot-pane[data-state="listening"] .ant { animation-duration: 0.5s; }
   #robot-pane[data-state="processing"] #robot-fallback { animation-duration: 0.8s; }
-  @media (max-width: 760px) {
+  @media (max-width: 900px) {
     #main-split { flex-direction: column; }
     #robot-pane { flex: 0 0 30%; border-right: none; border-bottom: 1px solid #c8e8ea; }
     #robot-fallback { width: auto; height: 100%; }
   }
   #chat-pane #main-content { flex: 1; }
   #robot-pane { min-height: 420px; }
-  @media (max-width: 760px) { #robot-pane { min-height: 0; } }
+  @media (max-width: 900px) { #robot-pane { min-height: 0; } }
 </style>
 <script src="https://unpkg.com/@rive-app/canvas@2"></script>
 <script>
-  // ?avatar=b shows version B; default is version A (Sakhi character).
-  document.write('<script src="/static/' + (new URLSearchParams(location.search).get('avatar') === 'b' ? 'sakhi-text-b.js' : 'sakhi-text-a.js') + '"><\/script>');
+  // Default: illustrated character. ?avatar=a or ?avatar=b show the older versions A / B.
+  document.write('<script src="/static/' + ({a: 'sakhi-text-a.js', b: 'sakhi-text-b.js'}[new URLSearchParams(location.search).get('avatar')] || 'sakhi-character.js') + '"><\/script>');
 </script>
 </head>
 <body>
@@ -570,7 +570,7 @@
       <div class="footer-contact">
         <strong>Contact Information</strong>
         <div class="footer-contact-lines">
-          <div>Study: <a href="mailto:breastcancerdetection@tanuh.ai">breastcancerdetection@tanuh.ai</a></div>
+          <div>Study: <a href="mailto:breastcancerscreening@tanuh.ai">breastcancerscreening@tanuh.ai</a></div>
           <div>General: <a href="mailto:info@tanuh.ai">info@tanuh.ai</a></div>
           <div class="footer-tel">Tel: (080) 2293 4106 &nbsp;|&nbsp; (080) 2293 4107</div>
         </div>

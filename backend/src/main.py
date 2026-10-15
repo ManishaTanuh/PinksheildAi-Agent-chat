@@ -11,6 +11,7 @@ from .core.config import settings
 from .api.health import router as health_router
 from .api.sessions import router as sessions_router
 from .api.ws_voice import router as ws_voice_router
+from .api.demo import router as demo_router
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -41,11 +42,19 @@ async def add_timing_header(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(sessions_router)
 app.include_router(ws_voice_router)
+app.include_router(demo_router)
+
+
+# Previous default route (disabled): serve the landing page.
+# @app.get("/")
+# async def serve_frontend():
+#     return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/")
-async def serve_frontend():
-    return FileResponse(STATIC_DIR / "index.html")
+async def serve_default():
+    # Default route now opens the chat page directly.
+    return FileResponse(STATIC_DIR / "chat.html")
 
 
 @app.get("/text")
