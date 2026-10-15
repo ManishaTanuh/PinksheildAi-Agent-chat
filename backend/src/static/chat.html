@@ -560,9 +560,9 @@ userInput.addEventListener('keydown', e => {
 });
 
 // =====================================================================
-// Structured, click-through questionnaire (default). Use ?mode=ai for the original AI chat.
+// AI chat is the default. Use ?mode=form for the structured click-through questionnaire.
 // =====================================================================
-const STRUCTURED = new URLSearchParams(location.search).get('mode') !== 'ai';
+const STRUCTURED = new URLSearchParams(location.search).get('mode') === 'form';
 const DK = "Don't know", NA = 'Not applicable', NEVER = 'Never had a baby/Full time pregnancy';
 const YNDK = ['Yes', 'No', DK];
 const CANCERS_ALL = ['Breast Cancer', 'Ovarian Cancer', 'Colorectal Cancer', 'Pancreatic Cancer', 'Uterine Cancer', 'Thyroid Cancer', 'Others', DK];
