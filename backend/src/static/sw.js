@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pinkshieldai-v1';
+const CACHE_NAME = 'pinkshieldai-v2';
 const PRECACHE_URLS = [
   '/',
   '/text',

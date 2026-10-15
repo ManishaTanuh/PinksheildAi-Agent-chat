@@ -24,15 +24,17 @@ def predict(answers: dict) -> dict:
                for n, c in contribs if abs(c) > 0.1 and not n.endswith("answered")][:5]
 
     symptoms = str(answers.get("symptoms", "")).strip().lower() == "yes"
-    # Personal history of breast / ovarian / colorectal / pancreatic cancer always counts as HIGH.
+    # Any personal cancer history, or any cancer in the family, always counts as HIGH.
     f = normalize(answers)
-    cancer_history = f["q9"] == "yes" and f["q9_group"] == "high"
-    high = prob >= _MODEL["threshold"] or symptoms or cancer_history
+    cancer_history = f["q9"] == "yes"
+    family_history = f["q10"] == "yes"
+    high = prob >= _MODEL["threshold"] or symptoms or cancer_history or family_history
     return {
         "risk_class": "HIGH_RISK" if high else "LOW_RISK",
         "probability": round(prob, 4),
         "symptom_override": symptoms,
         "cancer_history_override": cancer_history,
+        "family_history_override": family_history,
         "top_drivers": drivers,
         "disclaimer": "Demo model trained on synthetic data. Not a diagnosis.",
     }

@@ -64,8 +64,13 @@ def test_basic_details_ranges():
 def test_personal_high_related_cancer_forces_high():
     r = predict({**LOW, "q9": "Yes", "q9_type": "Breast Cancer"})
     assert r["risk_class"] == "HIGH_RISK" and r["cancer_history_override"]
-    # a mid/other-related type is not forced
-    assert not predict({**LOW, "q9": "Yes", "q9_type": "Thyroid Cancer"})["cancer_history_override"]
+    # any personal cancer type is forced high
+    assert predict({**LOW, "q9": "Yes", "q9_type": "Thyroid Cancer"})["risk_class"] == "HIGH_RISK"
+
+
+def test_any_family_cancer_forces_high():
+    r = predict({**LOW, "q10": "Yes", "q10_who": "Second Order (Related to Mother/Father)", "q10_type": "Thyroid Cancer"})
+    assert r["risk_class"] == "HIGH_RISK" and r["family_history_override"]
 
 
 def test_decimals_accepted_except_pregnancy_count():
